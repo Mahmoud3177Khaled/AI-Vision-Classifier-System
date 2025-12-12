@@ -235,7 +235,7 @@ def addToFolder(image_list, folder_name):
     os.makedirs(folder_name, exist_ok=True)
 
     for i, img in enumerate(image_list):
-        image_name = f"{i}.jpg"  # don't include folder_name in the file name
+        image_name = f"{i}.jpg"  
         save_path = os.path.join(folder_name, image_name)
         img_bgr = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
         cv2.imwrite(save_path, img_bgr)
