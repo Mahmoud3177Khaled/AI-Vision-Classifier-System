@@ -11,6 +11,10 @@ from PIL import Image
 from pathlib import Path
 import math
 from pathlib import Path
+import random
+import math
+from PIL import Image
+import numpy as np
 
 from matplotlib import pyplot as plt
 
@@ -136,65 +140,74 @@ print("trash images:", len(trash_train))
 
 # ########### Implementing 3 Phases of Augmentation ############
 
-img_threshold = 500
+img_threshold = 800
 
 def get_image_size_cv2(image_path):
     image = cv2.imread(image_path)
     height, width = image.shape[:2]  # shape returns (height, width, channels)
     return width, height
 
-# Phase 1 — Geometric & lighting diversity
+# -------------------
+# Phase 1 — Mild geometric + lighting
+# -------------------
 def phase1_transform(original_height, original_width):
     return A.Compose([
-        A.Rotate(limit=15, p=0.7),  # ±15 degrees
-        A.RandomBrightnessContrast(brightness_limit=0.2, contrast_limit=0.15, p=0.8),
+        A.Rotate(limit=10, p=0.6),  # ±10 degrees
         A.HorizontalFlip(p=0.5),
+        A.RandomBrightnessContrast(brightness_limit=0.1, contrast_limit=0.1, p=0.7),
         A.RandomResizedCrop(
-            size=(original_height, original_width),  # required in latest Albumentations
-            scale=(0.8, 0.9),                        # crop 80–90% of area
-            ratio=(0.75, 1.33),                       # default aspect ratio
-            p=1.0
+            size=(original_height, original_width),
+            scale=(0.9, 1.0),
+            ratio=(0.9, 1.1),
+            p=0.9
         )
     ])
 
+# -------------------
+# Phase 2 — Mild color adjustments
+# -------------------
 def phase2_transform(original_height, original_width):
     return A.Compose([
-        A.ColorJitter(brightness=0.2,contrast=0.15, hue=0.1,p=0.68),
-        A.GaussNoise(std_range=(0.1,0.4)),
-        A.MotionBlur(blur_limit=(3, 7)),
-
+        A.ColorJitter(
+            brightness=0.1, contrast=0.1, hue=0.05, p=0.7
+        ),
+        A.GaussNoise(std_limit=(0.01, 0.05), p=0.5),  # very mild noise
     ])
 
+# -------------------
+# Phase 3 — Crop + light color tweak
+# -------------------
 def phase3_transform(original_height, original_width):
     return A.Compose([
         A.RandomResizedCrop(
-            size=(original_height, original_width),  # required in latest Albumentations
-            scale=(0.8, 0.9),  # crop 80–90% of area
-            ratio=(0.75, 1.33),  # default aspect ratio
-            p=1.0
+            size=(original_height, original_width),
+            scale=(0.9, 1.0),
+            ratio=(0.9, 1.1),
+            p=0.9
         ),
-        A.ColorJitter(brightness=0.2, contrast=0.15, hue=0.1, p=0.8)
+        A.ColorJitter(
+            brightness=0.1, contrast=0.1, hue=0.05, p=0.7
+        )
     ])
 
-
-import random
-import math
-from PIL import Image
-import numpy as np
-
-
+# -------------------
+# Main augmentation function
+# -------------------
 def augment_image(image_paths, img_threshold):
+    """
+    image_paths: list of file paths of the original images for a class
+    img_threshold: desired total number of images for this class after augmentation
+    """
     remaining_images = img_threshold - len(image_paths)
     augmented_images = []
 
     if remaining_images <= 0:
         return []  # already at or above threshold
 
-    # Divide remaining images across 3 phases
-    no_images_per_transformation = math.ceil(remaining_images / 3)
+    no_images_per_phase = math.ceil(remaining_images / 3)
 
     for phase in range(1, 4):
-        for _ in range(no_images_per_transformation):
+        for _ in range(no_images_per_phase):
             img_path = random.choice(image_paths)  # allow repetition
             img = np.array(Image.open(img_path))
 
@@ -209,13 +222,12 @@ def augment_image(image_paths, img_threshold):
             augmented_images.append(aug_img)
 
             if len(augmented_images) >= remaining_images:
-                break  # stop if we reached threshold
+                break
 
         if len(augmented_images) >= remaining_images:
             break
 
     return augmented_images
-
 
 aug_cardboard = augment_image(cardboard_train, img_threshold)
 print("Successfully augmented cardboard images\n length=",len(aug_cardboard))
