@@ -8,6 +8,8 @@ from sklearn.svm import SVC
 # Load preprocessing objects
 
 X_train, y_train, X_test, y_test = get_data(features_dir)
+scaler = joblib.load(model_dir / "scaler.pkl")
+pca = joblib.load(model_dir / "PCA.pkl")
 
 
 svm = SVC(

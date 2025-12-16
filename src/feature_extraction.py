@@ -11,7 +11,8 @@ class_map = {
     2: 'cardboard',
     3: 'plastic',
     4: 'metal',
-    5: 'trash'
+    5: 'trash',
+    6:'unknown'
 }
 
 # Function to extract HOG features
