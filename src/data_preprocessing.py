@@ -140,7 +140,7 @@ print("trash images:", len(trash_train))
 
 # ########### Implementing 3 Phases of Augmentation ############
 
-img_threshold = 800
+img_threshold = 370
 
 def get_image_size_cv2(image_path):
     image = cv2.imread(image_path)

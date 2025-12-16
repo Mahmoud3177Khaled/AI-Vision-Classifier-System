@@ -9,16 +9,12 @@ from sklearn.svm import SVC
 
 X_train, y_train, X_test, y_test = get_data(features_dir)
 
-X_train, X_test = scale_PCA(
-    scaler, pca, X_train, X_test, y_train
-)
-
 
 svm = SVC(
     C=10,
     gamma='scale',
     kernel='rbf',
-    class_weighxt='balanced',
+    class_weight='balanced',
     decision_function_shape='ovr'
 )
 
