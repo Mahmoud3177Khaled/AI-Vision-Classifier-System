@@ -29,15 +29,16 @@ def trainSVM(model, x_train_, y_train_):
     joblib.dump(model, save_dir / "svm_model.pkl")  # Will overwrite if exists
     joblib.dump(scaler, save_dir / "svm_scaler.pkl")
     print("\nModel saved to ../classifier/svm_model.pkl")
+    print("SVM Scaler saved to ../classifier/svm_scaler.pkl")
 
 def getAccuracy( X, y,svm_model_dir=Path("../classifier")):
     svm_model = joblib.load(svm_model_dir / "svm_model.pkl")
     acc = svm_model.score(X, y)
-    print("\nAccuracy of svm:", acc)
+    print("\nAccuracy of svm:", acc, "\n")
     return acc
 
 def predictSVM(sample, threshold=0.6,svm_model_dir=Path("../classifier")):
-    classes = ["cardboard", "glass", "metal", "paper", "plastic", "trash"]
+    classes = ["glass", "paper", "cardboard", "plastic", "metal", "trash", "unknown"]
 
     svm_model= joblib.load(svm_model_dir / "svm_model.pkl")
     probs = svm_model.predict_proba(sample)

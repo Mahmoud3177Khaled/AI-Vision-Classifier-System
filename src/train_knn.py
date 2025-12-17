@@ -43,10 +43,33 @@ def run_knn(features_dir, model_dir, scaler, pca):
     # Save model
     if not model_dir.exists():
         model_dir.mkdir(parents=True, exist_ok=True)
-    print("\nModel saved to ../classifier/knn_model.pkl")
     joblib.dump(knn, model_dir / "knn_model.pkl")
     joblib.dump(scaler, model_dir / "knn_scaler.pkl")
     joblib.dump(pca, model_dir / "knn_PCA.pkl")
+    print("\nModel saved to ../classifier/knn_model.pkl")
+    print("\nKnn Scaler saved to ../classifier/knn_scaler.pkl")
+    print("\nKnn PCA saved to ../classifier/knn_PCA.pkl")
+
+    return X_test
+
+def predict_knn(X_test, model_dir, threshold = 0.6):
+    classes = ["glass", "paper", "cardboard", "plastic", "metal", "trash", "unknown"]
+
+    knn = joblib.load(model_dir / "knn_model.pkl")
+    probs = knn.predict_proba(X_test)
+    max_probs = probs.max(axis=1)
+
+    distances, _ = knn.kneighbors(X_test, n_neighbors=1)
+    min_dist = distances[:, 0]
+    y_pred = knn.predict(X_test)
+
+    unknown_mask = (max_probs < threshold) | (min_dist > threshold)
+    y_pred[unknown_mask] = 6    #unknown class id
+    pred_class_names = [classes[i] for i in y_pred]
+    num_unknown = np.sum(unknown_mask)
+
+    print("\nNumber of samples classified as unknown: ", num_unknown)
+    print("Predicted classes:", pred_class_names)
 
 
 features_dir = Path(__file__).resolve().parent.parent / "features"
@@ -54,5 +77,5 @@ model_dir = Path(__file__).resolve().parent.parent / "classifier"
 
 scaler = joblib.load(model_dir / "scaler.pkl")
 pca = joblib.load(model_dir / "PCA.pkl")
-run_knn(features_dir, model_dir, scaler, pca)
-
+X_test = run_knn(features_dir, model_dir, scaler, pca)
+predict_knn(X_test, model_dir, 0.6)
