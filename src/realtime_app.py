@@ -11,20 +11,17 @@ from pca import get_data
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 
-# --------------------------------
-# Load trained pipeline (FIXED)
-# --------------------------------
+# Load trained pipeline
 BASE = Path(__file__).resolve().parent.parent
 MODEL_DIR = BASE / "classifier"
 FEATURES_DIR = BASE / "features"
 
-knn = joblib.load(MODEL_DIR / "knn_model.pkl")
-
+knn = joblib.load(MODEL_DIR / "svm_model.pkl")
 scaler = StandardScaler()
 pca = PCA(n_components=knn.n_features_in_)
 
 
-# 🔴 FIX: fit scaler + PCA once using training data
+# fit scaler + PCA once using training data
 X_train, _, _, _ = get_data(FEATURES_DIR)
 X_train = scaler.fit_transform(X_train)
 pca.fit(X_train)
@@ -40,9 +37,7 @@ class_map = {
     6: 'unknown'
 }
 
-# --------------------------------
-# UI helper
-# --------------------------------
+# ui draw helper
 def draw_label(frame, text):
     h, w, _ = frame.shape
     box_w, box_h = 320, 50
@@ -61,9 +56,7 @@ def draw_label(frame, text):
         0.9, (0, 255, 0), 2
     )
 
-# --------------------------------
-# Main realtime loop
-# --------------------------------
+# main loop
 def main():
     cap = cv2.VideoCapture(0)
     if not cap.isOpened():
@@ -78,7 +71,7 @@ def main():
         if not ret:
             break
 
-        # Run inference every 1 second
+        # run every 1 second
         if time.time() - last_infer_time >= 1:
             resized = cv2.resize(frame, (128, 128))
 
