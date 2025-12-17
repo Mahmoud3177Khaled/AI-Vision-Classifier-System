@@ -10,7 +10,7 @@ from sklearn.svm import SVC
 
 X_train, y_train, X_test, y_test = get_data(features_dir)
 scaler = joblib.load(model_dir / "scaler.pkl")
-pca = joblib.load(model_dir / "PCA.pkl")
+X_train, X_test = scale(scaler, X_train, X_test)
 
 svm_model = SVC(
     C=10,
@@ -27,12 +27,12 @@ def trainSVM(model, x_train_, y_train_):
     save_dir.mkdir(parents=True, exist_ok=True)  # Ensure folder exists
     model.fit(x_train_, y_train_)
     joblib.dump(model, save_dir / "svm_model.pkl")  # Will overwrite if exists
-    print("Model saved to ../classifier/svm_model.pkl")
+    print("\nModel saved to ../classifier/svm_model.pkl")
 
 def getAccuracy( X, y,svm_model_dir=Path("../classifier")):
     svm_model = joblib.load(svm_model_dir / "svm_model.pkl")
     acc = svm_model.score(X, y)
-    print("Test accuracy:", acc)
+    print("\nAccuracy of svm:", acc)
     return acc
 
 def predictSVM(sample, threshold=0.6,svm_model_dir=Path("../classifier")):

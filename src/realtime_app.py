@@ -17,8 +17,8 @@ MODEL_DIR = BASE / "classifier"
 FEATURES_DIR = BASE / "features"
 
 knn = joblib.load(MODEL_DIR / "knn_model.pkl")
-scaler = StandardScaler()
-pca = PCA(n_components=knn.n_features_in_)
+scaler = joblib.load(MODEL_DIR / "scaler.pkl")
+pca = joblib.load(MODEL_DIR / "PCA.pkl")
 
 
 # fit scaler + PCA once using training data
