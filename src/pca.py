@@ -1,6 +1,6 @@
+# Run only once to avoid randomness of Scaler and PCA =========
 import numpy as np
 from pathlib import Path
-from sklearn.neighbors import KNeighborsClassifier as Knn
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
@@ -38,13 +38,18 @@ def get_data(features_dir):
 
     return X_train, y_train, X_test, y_test
 
-
 # Scale features
-def scale_PCA(scaler, pca, X_train, X_test, y_train):
+def scale(scaler, X_train, X_test):
     # Scale
     X_train = scaler.fit_transform(X_train)
     X_test = scaler.transform(X_test)
 
+    return X_train, X_test
+
+def apply_PCA(scaler, pca, X_train, X_test, y_train):
+    # Scaling
+    X_train, X_test = scale(scaler, X_train, X_test)
+    
     # Apply PCA
     X_train = pca.fit_transform(X_train)
     X_test = pca.transform(X_test)
@@ -67,20 +72,11 @@ def scale_PCA(scaler, pca, X_train, X_test, y_train):
     plt.show()
     return X_train, X_test
 
-
-
 features_dir = Path(__file__).resolve().parent.parent / "features"
 model_dir = Path(__file__).resolve().parent.parent / "classifier"
 
-
-# Run only once to avoid randomness of Scaler and PCA =========
 scaler = StandardScaler()
 pca = PCA(n_components=0.98)
 model_dir.mkdir(parents=True, exist_ok=True)
 joblib.dump(scaler, model_dir / "scaler.pkl")
 joblib.dump(pca, model_dir / "PCA.pkl")
-#==============================================================
-
-
-scaler = joblib.load(model_dir / "scaler.pkl")
-pca = joblib.load(model_dir / "PCA.pkl")
