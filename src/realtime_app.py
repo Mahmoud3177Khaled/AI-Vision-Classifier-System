@@ -16,7 +16,7 @@ BASE = Path(__file__).resolve().parent.parent
 MODEL_DIR = BASE / "classifier"
 FEATURES_DIR = BASE / "features"
 
-knn = joblib.load(MODEL_DIR / "svm_model.pkl")
+knn = joblib.load(MODEL_DIR / "knn_model.pkl")
 scaler = StandardScaler()
 pca = PCA(n_components=knn.n_features_in_)
 
