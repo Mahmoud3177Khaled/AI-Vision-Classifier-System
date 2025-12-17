@@ -1,276 +1,309 @@
 import os
 import random
+import math
 import shutil
-
+from pathlib import Path
 
 import cv2
 import numpy as np
-import pandas as pd
+from PIL import Image
 import albumentations as A
-from PIL import Image
-from pathlib import Path
-import math
-from pathlib import Path
-import random
-import math
-from PIL import Image
-import numpy as np
 
-from matplotlib import pyplot as plt
+# ======================================================
+# Reproducibility
+# ======================================================
+SEED = 42
+random.seed(SEED)
+np.random.seed(SEED)
 
-#################### Data Initialization ###########################
+# ======================================================
+# Global configuration
+# ======================================================
+IMG_THRESHOLD = 600
+SUPPORTED_EXT = {".jpg", ".jpeg", ".png"}
 
-dataset_dir = Path("../dataset")
+DATASET_DIR = Path("../dataset")
+TRAIN_DIR = Path("../train")
+TEST_DIR = Path("../test")
 
-cardboard = []
-glass = []
-metal = []
-paper = []
-plastic = []
-trash = []
-
-# Dictionary to map folder names to lists
-folder_to_list = {
-    "cardboard": cardboard,
-    "glass": glass,
-    "metal": metal,
-    "paper": paper,
-    "plastic": plastic,
-    "trash": trash
+# ======================================================
+# Per-class augmentation strength
+# ======================================================
+CLASS_STRENGTH = {
+    "cardboard": 1.0,
+    "glass": 0.8,     # preserve fragile edges
+    "metal": 1.1,     # tolerate more noise
+    "paper": 0.9,
+    "plastic": 1.0,
+    "trash": 1.3      # most diverse → strongest augmentation
 }
 
-# Iterate over all folders in the dataset
-for folder in dataset_dir.iterdir():
-    if folder.is_dir() and folder.name in folder_to_list:
-        # Iterate over all files in the folder (images)
-        for file in folder.iterdir():
-            if file.is_file() and file.suffix.lower() in [".jpg", ".jpeg", ".png"]:
-                folder_to_list[folder.name].append(file)
+# ======================================================
+# Utility functions
+# ======================================================
+
+def is_valid_image(path: Path) -> bool:
+    """Checks whether an image can be safely opened."""
+    try:
+        with Image.open(path) as img:
+            img.verify()
+        return True
+    except Exception:
+        return False
 
 
-print("Number of Images Before Removing Corrupted Images")
-print("Cardboard images:", len(cardboard))
-print("glass images:", len(glass))
-print("metal images:", len(metal))
-print("paper images:", len(paper))
-print("plastic images:", len(plastic))
-print("trash images:", len(trash))
+def load_clean_images(folder: Path):
+    """Loads valid image paths from a folder."""
+    images = []
+    for file in folder.iterdir():
+        if file.suffix.lower() in SUPPORTED_EXT and is_valid_image(file):
+            images.append(file)
+    return images
+
+
+def read_image(path: Path):
+    """Reads image as RGB numpy array."""
+    return np.array(Image.open(path).convert("RGB"))
+
+
+def save_augmented_image(
+    image: np.ndarray,
+    save_dir: Path,
+    class_name: str,
+    phase: int,
+    source_name: str,
+    index: int
+):
+    """Saves augmented image with traceable filename."""
+    filename = (
+        f"{class_name}_p{phase}_"
+        f"{source_name}_aug_{index}.jpg"
+    )
+    save_path = save_dir / filename
+
+    cv2.imwrite(
+        str(save_path),
+        cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+    )
+
+def split_original_images(clean_images, class_name: str):
+    """
+    Splits already-cleaned original images into train/test.
+    """
+    images = clean_images.copy()
+    random.shuffle(images)
+
+    if class_name == "trash":
+        test_size = min(35, len(images) // 2)
+    else:
+        test_size = math.ceil(0.2 * len(images))
+
+    test_images = images[:test_size]
+    train_images = images[test_size:]
+
+    # Create directories
+    train_class_dir = TRAIN_DIR / class_name
+    test_class_dir = TEST_DIR / class_name
+    train_class_dir.mkdir(parents=True, exist_ok=True)
+    test_class_dir.mkdir(parents=True, exist_ok=True)
+
+    # Copy originals
+    for img in train_images:
+        shutil.copy(img, train_class_dir / img.name)
+
+    for img in test_images:
+        shutil.copy(img, test_class_dir / img.name)
+
+    return train_images
 
 
 
-########### Dropping Corrupted Pictures ######################
-def drop_corrupted_images(img_paths):
-    res=[]
-    for path in img_paths:
-        if(os.stat(path).st_size!=0):
-            res.append(path)
-    return res
+# ======================================================
+# Phase-based transformations
+# ======================================================
 
-
-final_cardboard = drop_corrupted_images(cardboard)
-final_glass = drop_corrupted_images(glass)
-final_metal = drop_corrupted_images(metal)
-final_paper = drop_corrupted_images(paper)
-final_plastic = drop_corrupted_images(plastic)
-final_trash = drop_corrupted_images(trash)
-
-print("Number of Images After Removing Corrupted Images")
-print("Cardboard images:", len(final_cardboard))
-print("glass images:", len(final_glass))
-print("metal images:", len(final_metal))
-print("paper images:", len(final_paper))
-print("plastic images:", len(final_plastic))
-print("trash images:", len(final_trash))
-
-########### randomizing & Split For Test and Train ###########
-
-def random_split(img_paths, percentage_train, folder_name):
-    # Split sizes
-    train_size = math.ceil(percentage_train * len(img_paths))
-
-    # Randomly sample train images
-    train_data = random.sample(img_paths, train_size)
-    test_data = [img for img in img_paths if img not in train_data]
-
-    # Paths
-    train_path = Path(f"../train/{folder_name}")
-    test_path = Path(f"../test/{folder_name}")
-
-    # Remove existing folders
-    if train_path.exists():
-        shutil.rmtree(train_path)
-    if test_path.exists():
-        shutil.rmtree(test_path)
-
-    # Create empty folders
-    train_path.mkdir(parents=True, exist_ok=True)
-    test_path.mkdir(parents=True, exist_ok=True)
-
-    # Copy images
-    for img in train_data:
-        shutil.copy(img, train_path / Path(img).name)
-
-    for img in test_data:
-        shutil.copy(img, test_path / Path(img).name)
-
-    return train_data, test_data
-
-train_data_path = "../train"
-test_data_path = "../test"
-
-# Make sure parent folders exist
-Path(train_data_path).mkdir(exist_ok=True, parents=True)
-Path(test_data_path).mkdir(exist_ok=True, parents=True)
-
-cardboard_train, cardboard_test = random_split(final_cardboard, 0.8, "cardboard")
-glass_train, glass_test = random_split(final_glass, 0.8, "glass")
-metal_train, metal_test = random_split(final_metal, 0.8, "metal")
-paper_train, paper_test = random_split(final_paper, 0.8, "paper")
-plastic_train, plastic_test = random_split(final_plastic, 0.8, "plastic")
-trash_train, trash_test = random_split(final_trash, 0.8, "trash")
-
-
-print("Number of Training Samples")
-print("Cardboard images:", len(cardboard_train))
-print("glass images:", len(glass_train))
-print("metal images:", len(metal_train))
-print("paper images:", len(paper_train))
-print("plastic images:", len(plastic_train))
-print("trash images:", len(trash_train))
-
-# ########### Implementing 3 Phases of Augmentation ############
-
-img_threshold = 370
-
-def get_image_size_cv2(image_path):
-    image = cv2.imread(image_path)
-    height, width = image.shape[:2]  # shape returns (height, width, channels)
-    return width, height
-
-# -------------------
-# Phase 1 — Mild geometric + lighting
-# -------------------
-def phase1_transform(original_height, original_width):
+def phase1_transform(h, w, strength):
+    """Geometric + lighting robustness."""
     return A.Compose([
-        A.Rotate(limit=10, p=0.6),  # ±10 degrees
+        A.Rotate(limit=int(15 * strength), p=0.7),
         A.HorizontalFlip(p=0.5),
-        A.RandomBrightnessContrast(brightness_limit=0.1, contrast_limit=0.1, p=0.7),
+        A.RandomBrightnessContrast(
+            brightness_limit=0.2 * strength,
+            contrast_limit=0.15 * strength,
+            p=0.8
+        ),
         A.RandomResizedCrop(
-            size=(original_height, original_width),
-            scale=(0.9, 1.0),
-            ratio=(0.9, 1.1),
-            p=0.9
+            size=(h, w),
+            scale=(0.80, 0.95),
+            ratio=(0.75, 1.33),
+            p=1.0
         )
     ])
 
-# -------------------
-# Phase 2 — Mild color adjustments
-# -------------------
-def phase2_transform(original_height, original_width):
+
+def phase2_transform(strength):
+    """Sensor noise + motion blur + color-safe lighting."""
+
+    max_kernel = int(5 * strength)
+    if max_kernel % 2 == 0:
+        max_kernel += 1
+
     return A.Compose([
-        A.ColorJitter(
-            brightness=0.1, contrast=0.1, hue=0.05, p=0.7
+        # --- COLOR-SAFE LIGHTING ---
+        A.HueSaturationValue(
+            hue_shift_limit=0,              # NO hue changes
+            sat_shift_limit=0,              # NO saturation changes
+            val_shift_limit=int(20 * strength),  # brightness only
+            p=0.7
         ),
-        A.GaussNoise(std_limit=(0.01, 0.05), p=0.5),  # very mild noise
+
+        # --- CAMERA EFFECTS ---
+        A.MotionBlur(
+            blur_limit=(3, max_kernel),
+            p=0.5
+        ),
+
+        # --- SENSOR NOISE ---
+        A.GaussNoise(
+            std_range=(0.01 * strength, 0.05 * strength),
+            p=0.4
+        ),
     ])
 
-# -------------------
-# Phase 3 — Crop + light color tweak
-# -------------------
-def phase3_transform(original_height, original_width):
+
+def phase3_transform(h, w, strength):
     return A.Compose([
         A.RandomResizedCrop(
-            size=(original_height, original_width),
-            scale=(0.9, 1.0),
-            ratio=(0.9, 1.1),
-            p=0.9
+            size=(h, w),
+            scale=(0.85, 1.0),
+            ratio=(0.95, 1.05),
+            p=1.0
         ),
-        A.ColorJitter(
-            brightness=0.1, contrast=0.1, hue=0.05, p=0.7
-        )
+        A.RandomBrightnessContrast(
+            brightness_limit=0.05 * strength,
+            contrast_limit=0.05 * strength,
+            p=0.5
+        ),
     ])
 
-# -------------------
-# Main augmentation function
-# -------------------
-def augment_image(image_paths, img_threshold):
-    """
-    image_paths: list of file paths of the original images for a class
-    img_threshold: desired total number of images for this class after augmentation
-    """
-    remaining_images = img_threshold - len(image_paths)
-    augmented_images = []
 
-    if remaining_images <= 0:
-        return []  # already at or above threshold
+# ======================================================
+# Core augmentation logic
+# ======================================================
 
-    no_images_per_phase = math.ceil(remaining_images / 3)
+def augment_class(class_name: str, train_images):
+    train_class_dir = TRAIN_DIR / class_name
+    strength = CLASS_STRENGTH[class_name]
+
+    # current_count includes ONLY original training images
+    # augmented images are added directly to disk
+    current_count = len(train_images)
+    needed = IMG_THRESHOLD - current_count
+
+    if needed <= 0:
+        return
+
+    per_phase = math.ceil(needed / 3)
+    aug_count = 0
 
     for phase in range(1, 4):
-        for _ in range(no_images_per_phase):
-            img_path = random.choice(image_paths)  # allow repetition
-            img = np.array(Image.open(img_path))
+        for _ in range(per_phase):
+            if aug_count >= needed:
+                return
+
+            src = random.choice(train_images)
+            img = read_image(src)
+            h, w = img.shape[:2]
 
             if phase == 1:
-                transform = phase1_transform(img.shape[0], img.shape[1])
+                transform = phase1_transform(h, w, strength)
             elif phase == 2:
-                transform = phase2_transform(img.shape[0], img.shape[1])
+                transform = phase2_transform(strength)
             else:
-                transform = phase3_transform(img.shape[0], img.shape[1])
+                transform = phase3_transform(h, w, strength)
 
-            aug_img = transform(image=img)['image']
-            augmented_images.append(aug_img)
+            augmented = transform(image=img)["image"]
 
-            if len(augmented_images) >= remaining_images:
-                break
+            save_augmented_image(
+                augmented,
+                train_class_dir,
+                class_name,
+                phase,
+                src.stem,
+                aug_count
+            )
 
-        if len(augmented_images) >= remaining_images:
-            break
+            aug_count += 1
 
-    return augmented_images
 
-aug_cardboard = augment_image(cardboard_train, img_threshold)
-print("Successfully augmented cardboard images\n length=",len(aug_cardboard))
-aug_paper = augment_image(paper_train, img_threshold)
-print("Successfully augmented paper images\n length=",len(aug_paper))
-aug_glass = augment_image(glass_train, img_threshold)
-print("Successfully augmented glass images\n length=",len(aug_glass))
-aug_metal = augment_image(metal_train, img_threshold)
-print("Successfully augmented metal images\n length=",len(aug_metal))
-aug_plastic = augment_image(plastic_train, img_threshold)
-print("Successfully augmented plastic images\n length=",len(aug_plastic))
-aug_trash = augment_image(trash_train, img_threshold)
-print("Successfully augmented trash images\n length=",len(aug_trash))
+# ======================================================
+# Dataset-level runner
+# ======================================================
 
-def addToFolder(image_list, folder_name):
-    # Make sure the folder exists
-    os.makedirs(folder_name, exist_ok=True)
+# def run_augmentation(train_dir: Path):
+#     print("\n=== Starting Data Augmentation ===\n")
+#
+#     for class_dir in train_dir.iterdir():
+#         if not class_dir.is_dir():
+#             continue
+#
+#         class_name = class_dir.name
+#
+#         if class_name not in CLASS_STRENGTH:
+#             print(f"Skipping unknown class: {class_name}")
+#             continue
+#
+#         images = load_clean_images(class_dir)
+#
+#         print(f"{class_name}: {len(images)} training images")
+#
+#         augment_class(
+#             image_paths=images,
+#             class_name=class_name,
+#             save_dir=class_dir
+#         )
+#
+#         print(f"{class_name}: augmented to {IMG_THRESHOLD}\n")
+#
+#     print("=== Augmentation Completed ===\n")
 
-    for i, img in enumerate(image_list):
-        image_name = f"{i}.jpg"  
-        save_path = os.path.join(folder_name, image_name)
-        img_bgr = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
-        cv2.imwrite(save_path, img_bgr)
 
-# Base folder for your train dataset
-train_data_path = "../train"
+# ======================================================
+# Entry point
+# ======================================================
+def main():
+    if TRAIN_DIR.exists():
+        shutil.rmtree(TRAIN_DIR)
+    if TEST_DIR.exists():
+        shutil.rmtree(TEST_DIR)
 
-# Add images to each class folder
-addToFolder(aug_cardboard, os.path.join(train_data_path, "cardboard"))
-print("Successfully added augmented cardboard images")
+    TRAIN_DIR.mkdir()
+    TEST_DIR.mkdir()
 
-addToFolder(aug_paper, os.path.join(train_data_path, "paper"))
-print("Successfully added augmented paper images")
+    for class_folder in DATASET_DIR.iterdir():
+        if not class_folder.is_dir():
+            continue
 
-addToFolder(aug_glass, os.path.join(train_data_path, "glass"))
-print("Successfully added augmented glass images")
+        class_name = class_folder.name
 
-addToFolder(aug_metal, os.path.join(train_data_path, "metal"))
-print("Successfully added augmented metal images")
+        if class_name not in CLASS_STRENGTH:
+            print(f"Skipping unknown class: {class_name}")
+            continue
 
-addToFolder(aug_plastic, os.path.join(train_data_path, "plastic"))
-print("Successfully added augmented plastic images")
+        print(f"\nProcessing {class_name}")
 
-addToFolder(aug_trash, os.path.join(train_data_path, "trash"))
-print("Successfully added augmented trash images")
+        clean_images = load_clean_images(class_folder)
+
+        if len(clean_images) == 0:
+            print(f"No valid images found for {class_name}, skipping.")
+            continue
+
+        train_images = split_original_images(clean_images, class_name)
+        augment_class(class_name, train_images)
+
+        print(f"{class_name}: training set augmented to {IMG_THRESHOLD}")
+
+
+if __name__ == "__main__":
+    main()
 
