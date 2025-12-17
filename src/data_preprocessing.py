@@ -86,6 +86,7 @@ def save_augmented_image(
         cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
     )
 
+
 def split_original_images(clean_images, class_name: str):
     """
     Splits already-cleaned original images into train/test.
@@ -115,7 +116,6 @@ def split_original_images(clean_images, class_name: str):
         shutil.copy(img, test_class_dir / img.name)
 
     return train_images
-
 
 
 # ======================================================
@@ -234,38 +234,6 @@ def augment_class(class_name: str, train_images):
             )
 
             aug_count += 1
-
-
-# ======================================================
-# Dataset-level runner
-# ======================================================
-
-# def run_augmentation(train_dir: Path):
-#     print("\n=== Starting Data Augmentation ===\n")
-#
-#     for class_dir in train_dir.iterdir():
-#         if not class_dir.is_dir():
-#             continue
-#
-#         class_name = class_dir.name
-#
-#         if class_name not in CLASS_STRENGTH:
-#             print(f"Skipping unknown class: {class_name}")
-#             continue
-#
-#         images = load_clean_images(class_dir)
-#
-#         print(f"{class_name}: {len(images)} training images")
-#
-#         augment_class(
-#             image_paths=images,
-#             class_name=class_name,
-#             save_dir=class_dir
-#         )
-#
-#         print(f"{class_name}: augmented to {IMG_THRESHOLD}\n")
-#
-#     print("=== Augmentation Completed ===\n")
 
 
 # ======================================================

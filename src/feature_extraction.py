@@ -71,7 +71,7 @@ def extract_features(image_path):
     # image = cv2.resize(image, (128, 128))  # Resize for consistency
 
     # Aspect-ratio preserving resize + center crop
-    image = resize_with_aspect_ratio_and_center_crop(image, target_size=192)
+    image = resize_with_aspect_ratio_and_center_crop(image, target_size=160)
 
     hog_features = extract_hog(image)
     color_features = extract_color_hist(image)
