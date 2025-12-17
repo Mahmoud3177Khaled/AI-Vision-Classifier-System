@@ -47,20 +47,18 @@ def predictSVM(sample, threshold=0.6,svm_model_dir=Path("../classifier")):
     final_preds = ["unknown" if mp < threshold else name
                    for name, mp in zip(pred_class_names, max_probs)]
 
-    print("Predicted class:", final_preds)
+    # print("Predicted class:", final_preds)
     # print("Class probabilities:", probs)
     return final_preds
 
 
 
 
-# trainSVM(svm_model,X_train,y_train)
-# save_dir = Path("../classifier")
-# getAccuracy(X_test,y_test)
+trainSVM(svm_model,X_train,y_train)
+save_dir = Path("../classifier")
+getAccuracy(X_test,y_test)
 
-
-#
 threshold = 0.6
-#
+
 # print("Actual:",y_test)
 predictSVM( X_test,threshold)
