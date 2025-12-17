@@ -45,34 +45,14 @@ def run_knn(features_dir, model_dir, scaler, pca):
         model_dir.mkdir(parents=True, exist_ok=True)
     print("\nModel saved to ../classifier/knn_model.pkl")
     joblib.dump(knn, model_dir / "knn_model.pkl")
-    joblib.dump(scaler, model_dir / "scaler.pkl")
-    joblib.dump(pca, model_dir / "PCA.pkl")
+    joblib.dump(scaler, model_dir / "knn_scaler.pkl")
+    joblib.dump(pca, model_dir / "knn_PCA.pkl")
 
 
 features_dir = Path(__file__).resolve().parent.parent / "features"
 model_dir = Path(__file__).resolve().parent.parent / "classifier"
 
-# Run only once to avoid randomness of Scaler and PCA =========
-# scaler = StandardScaler()
-# pca = PCA(n_components=0.9)
-# joblib.dump(scaler, model_dir / "scaler.pkl")
-# joblib.dump(pca, model_dir / "PCA.pkl")
-#==============================================================
-
 scaler = joblib.load(model_dir / "scaler.pkl")
 pca = joblib.load(model_dir / "PCA.pkl")
 run_knn(features_dir, model_dir, scaler, pca)
 
-# features_dir = Path(__file__).resolve().parent.parent / "features"
-# model_dir = Path(__file__).resolve().parent.parent / "classifier"
-
-# # === TEMPORARY: Create and fit fresh scaler + PCA (run this once!) ===
-# scaler = StandardScaler()
-# pca = PCA(n_components=0.9)  # or 0.98 if you want more components
-
-# print("Creating and fitting new scaler and PCA...")
-# run_knn(features_dir, model_dir, scaler, pca)
-
-# print("\n=== DONE! ===")
-# print("Fitted scaler, PCA, and KNN model have been saved.")
-# print("You can now revert the script to load them instead of creating new ones.")
