@@ -117,13 +117,15 @@ def process_folder(folder_path, output_dir):
         print("No features extracted.")
 
 
-# Example: Process the test folder
-BASE_DIR = Path(__file__).resolve().parent.parent
 
-test_folder = BASE_DIR / "train"
-output_dir = BASE_DIR / "features" / "train"
-process_folder(test_folder, output_dir)
+if __name__ == "__main__":
+    # Example: Process the test folder
+    BASE_DIR = Path(__file__).resolve().parent.parent
 
-test_folder = BASE_DIR / "test"
-output_dir = BASE_DIR / "features" / "test"
-process_folder(test_folder, output_dir)
+    test_folder = BASE_DIR / "train"
+    output_dir = BASE_DIR / "features" / "train"
+    process_folder(test_folder, output_dir)
+
+    test_folder = BASE_DIR / "test"
+    output_dir = BASE_DIR / "features" / "test"
+    process_folder(test_folder, output_dir)
