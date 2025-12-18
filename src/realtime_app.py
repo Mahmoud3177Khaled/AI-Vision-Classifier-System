@@ -3,10 +3,10 @@ import time
 import joblib
 import numpy as np
 from pathlib import Path
-from PIL import Image  # Required for Image.fromarray
+from PIL import Image
 
 from feature_extraction2 import extract_cnn_features, preprocess
-from feature_extraction2 import feature_extractor, device  # already built and on correct device
+from feature_extraction2 import feature_extractor, device
 
 # paths we will use
 CLASSIFIERS = Path(__file__).resolve().parent.parent / "classifier"
