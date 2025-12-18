@@ -5,8 +5,8 @@ import numpy as np
 from pathlib import Path
 from PIL import Image
 
-from feature_extraction2 import extract_cnn_features, preprocess
-from feature_extraction2 import device
+from feature_extraction2 import extract_cnn_features_live, preprocess
+from feature_extraction2 import  device
 
 # paths we will use
 CLASSIFIERS = Path(__file__).resolve().parent.parent / "classifier"
@@ -66,7 +66,7 @@ while True:
             pil_image = Image.fromarray(rgb_frame)
 
             # apply feature extraction
-            features = extract_cnn_features(pil_image)
+            features = extract_cnn_features_live(pil_image)
             features = features.reshape(1, -1)
 
             # apply the prefitted scaler
