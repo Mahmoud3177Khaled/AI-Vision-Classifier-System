@@ -57,6 +57,22 @@ def extract_cnn_features(image_path):
     features = features.flatten().cpu().numpy()
     return features
 
+# Function to extract CNN features (ResNet50) from an image
+def extract_cnn_features(image):
+    # Apply preprocessing
+    input_tensor = preprocess(image)
+    input_batch = input_tensor.unsqueeze(0)  # Add batch dimension
+    input_batch = input_batch.to(device)
+    
+    # Extract features
+    with torch.no_grad():
+        features = feature_extractor(input_batch)
+    
+    # Flatten to 2048-dim vector
+    features = features.flatten().cpu().numpy()
+    return features
+
+
 # Function to extract features for all images in a folder and save as .npy
 def process_folder(folder_path, output_dir):
     Path(output_dir).mkdir(parents=True, exist_ok=True)
