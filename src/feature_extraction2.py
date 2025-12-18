@@ -79,13 +79,13 @@ def process_folder(folder_path, output_dir):
     else:
         print("No images processed.")
 
+if __name__ == "__main__":
+    baseDir = Path(__file__).resolve().parent.parent
 
-baseDir = Path(__file__).resolve().parent.parent
+    train_folder = baseDir / "train"
+    train_output_dir = baseDir / "features" / "train"
+    process_folder(train_folder, train_output_dir)
 
-train_folder = baseDir / "train"
-train_output_dir = baseDir / "features" / "train"
-process_folder(train_folder, train_output_dir)
-
-test_folder = baseDir / "test"
-test_output_dir = baseDir / "features" / "test"
-process_folder(test_folder, test_output_dir)
+    test_folder = baseDir / "test"
+    test_output_dir = baseDir / "features" / "test"
+    process_folder(test_folder, test_output_dir)

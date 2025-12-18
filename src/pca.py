@@ -74,11 +74,13 @@ def apply_PCA(scaler, pca, X_train, X_test, y_train):
 
 features_dir = Path(__file__).resolve().parent.parent / "features"
 model_dir = Path(__file__).resolve().parent.parent / "classifier"
+if __name__ == "__main__":
 
-scaler = StandardScaler()
-pca = PCA(n_components=0.98)
-model_dir.mkdir(parents=True, exist_ok=True)
-joblib.dump(scaler, model_dir / "scaler.pkl")
-joblib.dump(pca, model_dir / "PCA.pkl")
-print("Scaler saved to ../classifier/scaler.pkl")
-print("PCA saved to ../classifier/PCA.pkl")
+    scaler = StandardScaler()
+    pca = PCA(n_components=0.98)
+    model_dir.mkdir(parents=True, exist_ok=True)
+    joblib.dump(scaler, model_dir / "scaler.pkl")
+    joblib.dump(pca, model_dir / "PCA.pkl")
+    print("Scaler saved to ../classifier/scaler.pkl")
+    print("PCA saved to ../classifier/PCA.pkl")
+

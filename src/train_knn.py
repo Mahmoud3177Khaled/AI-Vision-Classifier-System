@@ -69,13 +69,15 @@ def predict_knn(X_test, model_dir, threshold = 0.6):
     num_unknown = np.sum(unknown_mask)
 
     print("\nNumber of samples classified as unknown: ", num_unknown)
-    print("Predicted classes:", pred_class_names)
+    # print("Predicted classes:", pred_class_names)
 
 
-features_dir = Path(__file__).resolve().parent.parent / "features"
-model_dir = Path(__file__).resolve().parent.parent / "classifier"
+if __name__ == "__main__":
+    features_dir = Path(__file__).resolve().parent.parent / "features"
+    model_dir = Path(__file__).resolve().parent.parent / "classifier"
 
-scaler = joblib.load(model_dir / "scaler.pkl")
-pca = joblib.load(model_dir / "PCA.pkl")
-X_test = run_knn(features_dir, model_dir, scaler, pca)
-predict_knn(X_test, model_dir, 0.6)
+    scaler = joblib.load(model_dir / "scaler.pkl")
+    pca = joblib.load(model_dir / "PCA.pkl")
+    X_test = run_knn(features_dir, model_dir, scaler, pca)
+    predict_knn(X_test, model_dir, 0.6)
+

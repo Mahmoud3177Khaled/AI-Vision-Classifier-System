@@ -23,7 +23,7 @@ svm_model = SVC(
 
 
 def trainSVM(model, x_train_, y_train_):
-    save_dir = Path("../classifier")
+    save_dir = Path(__file__).resolve().parent.parent / "classifier"
     save_dir.mkdir(parents=True, exist_ok=True)  # Ensure folder exists
     model.fit(x_train_, y_train_)
     joblib.dump(model, save_dir / "svm_model.pkl")  # Will overwrite if exists
@@ -31,13 +31,13 @@ def trainSVM(model, x_train_, y_train_):
     print("\nModel saved to ../classifier/svm_model.pkl")
     print("SVM Scaler saved to ../classifier/svm_scaler.pkl")
 
-def getAccuracy( X, y,svm_model_dir=Path("../classifier")):
+def getAccuracy( X, y,svm_model_dir=Path(__file__).resolve().parent.parent / "classifier"):
     svm_model = joblib.load(svm_model_dir / "svm_model.pkl")
     acc = svm_model.score(X, y)
     print("\nAccuracy of svm:", acc, "\n")
     return acc
 
-def predictSVM(sample, threshold=0.6,svm_model_dir=Path("../classifier")):
+def predictSVM(sample, threshold=0.6,svm_model_dir=Path(__file__).resolve().parent.parent / "classifier"):
     classes = ["glass", "paper", "cardboard", "plastic", "metal", "trash", "unknown"]
 
     svm_model= joblib.load(svm_model_dir / "svm_model.pkl")
@@ -55,11 +55,13 @@ def predictSVM(sample, threshold=0.6,svm_model_dir=Path("../classifier")):
 
 
 
-trainSVM(svm_model,X_train,y_train)
-save_dir = Path("../classifier")
-getAccuracy(X_test,y_test)
+if __name__ == "__main__":
 
-threshold = 0.6
+    trainSVM(svm_model,X_train,y_train)
+    save_dir = Path(__file__).resolve().parent.parent / "classifier"
+    getAccuracy(X_test,y_test)
 
-# print("Actual:",y_test)
-predictSVM( X_test,threshold)
+    threshold = 0.6
+
+    # print("Actual:",y_test)
+    predictSVM( X_test,threshold)
