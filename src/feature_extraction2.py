@@ -17,6 +17,7 @@ class_map = {
 }
 
 
+
 device= torch.device("cpu")
 model= models.resnet50(pretrained=True)
 extractor= torch.nn.Sequential(*list(model.children())[:-1])
@@ -42,7 +43,7 @@ def extract_cnn_features(path):
     features = features.flatten().cpu().numpy()
     return features
 #used in live app
-def extract_cnn_features(image):
+def extract_cnn_features_live(image):
     tensor = preprocess(image)
     batch = tensor.unsqueeze(0)
     batch = batch.to(device)
