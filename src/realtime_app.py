@@ -1,57 +1,36 @@
+# realtime_app.py
 import cv2
 import time
 import joblib
 import numpy as np
 from pathlib import Path
 
-# Import the exact feature extractors used during training
-from feature_extraction import extract_hog, extract_color_hist, extract_lbp
+# Import the exact feature extraction functions from feature_extraction2.py
+# (do NOT copy-paste the model/preprocess code)
+from feature_extraction2 import extract_cnn_features, preprocess
+from feature_extraction2 import feature_extractor, device  # already built and on correct device
 
 # ----------------------------- Paths -----------------------------
 BASE = Path(__file__).resolve().parent.parent
 MODEL_DIR = BASE / "classifier"
 
-# ----------------------------- Load Model Pipeline -----------------------------
+# ----------------------------- Load SVM Pipeline -----------------------------
 try:
-    knn = joblib.load(MODEL_DIR / "knn_model.pkl")
-    scaler = joblib.load(MODEL_DIR / "scaler.pkl")
-    pca = joblib.load(MODEL_DIR / "PCA.pkl")
-    print("Model, scaler, and PCA loaded successfully.")
+    svm = joblib.load(MODEL_DIR / "svm_model.pkl")
+    scaler = joblib.load(MODEL_DIR / "svm_scaler.pkl")
+    print("SVM model and scaler loaded successfully.")
 except Exception as e:
-    raise FileNotFoundError(f"Failed to load model files: {e}")
+    raise FileNotFoundError(f"Failed to load SVM model files: {e}")
 
-# ----------------------------- Class Mapping (includes unknown) -----------------------------
+# ----------------------------- Class Mapping -----------------------------
 class_map = {
-    0: 'cardboard',
-    1: 'glass',
-    2: 'metal',
-    3: 'paper',
-    4: 'plastic',
-    5: 'trash',
-    6: 'unknown'
+    0: 'glass',
+    1: 'paper',
+    2: 'cardboard',
+    3: 'plastic',
+    4: 'metal',
+    5: 'trash'
 }
-
-# ----------------------------- Preprocessing Helper (exact match with training) -----------------------------
-def preprocess_frame(frame, target_size=160):
-    """
-    Matches resize_with_aspect_ratio_and_center_crop from feature_extraction.py
-    """
-    # Convert BGR (OpenCV) → RGB
-    rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-
-    h, w = rgb_frame.shape[:2]
-    scale = target_size / min(h, w)
-    new_w = int(round(w * scale))
-    new_h = int(round(h * scale))
-
-    resized = cv2.resize(rgb_frame, (new_w, new_h), interpolation=cv2.INTER_AREA)
-
-    # Center crop to target_size x target_size
-    start_x = (new_w - target_size) // 2
-    start_y = (new_h - target_size) // 2
-    cropped = resized[start_y:start_y + target_size, start_x:start_x + target_size]
-
-    return cropped
 
 # ----------------------------- UI Helper -----------------------------
 def draw_label(frame, text, confidence=None):
@@ -86,7 +65,6 @@ def main():
         print("Error: Could not open webcam.")
         return
 
-    # Optimize camera resolution
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 
@@ -94,8 +72,8 @@ def main():
     current_prediction = "Initializing..."
     current_confidence = None
 
-    print("Live Waste Classification Started")
-    print("Place object in view • Updates every second • Press 'q' to quit")
+    print("Live Waste Classification (ResNet50 + SVM) Started")
+    print("Hold object steady • Updates every second • Press 'q' to quit")
 
     while True:
         ret, frame = cap.read()
@@ -103,46 +81,34 @@ def main():
             print("Failed to grab frame.")
             break
 
-        # Mirror view
-        frame = cv2.flip(frame, 1)
+        frame = cv2.flip(frame, 1)  # mirror
 
         current_time = time.time()
         if current_time - last_infer_time >= 1.0:
             try:
-                # Preprocess exactly like training
-                processed_img = preprocess_frame(frame, target_size=160)
+                # Convert OpenCV frame (BGR) → RGB → PIL (exactly what the preprocess expects)
+                rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                pil_image = Image.fromarray(rgb_frame)
 
-                # Extract features
-                features = np.concatenate([
-                    extract_hog(processed_img),
-                    extract_color_hist(processed_img),
-                    extract_lbp(processed_img)
-                ]).reshape(1, -1)
+                # Feature extraction using the shared ResNet50 extractor
+                features = extract_cnn_features(pil_image)  # 2048-dim vector
+                features = features.reshape(1, -1)
 
-                # Transform using fitted scaler & PCA
+                # Apply the same scaler that was fitted on training features
                 features_scaled = scaler.transform(features)
-                features_pca = pca.transform(features_scaled)
 
-                # Predict
-                pred_label = int(knn.predict(features_pca)[0])
+                # SVM prediction + confidence
+                probs = svm.predict_proba(features_scaled)[0]
+                pred_idx = int(np.argmax(probs))
+                max_prob = float(np.max(probs))
 
-                # Compute confidence via distance-weighted voting
-                distances, indices = knn.kneighbors(features_pca)
-                weights = 1 / (distances[0] + 1e-5)
-                votes = np.zeros(7)  # 7 classes including unknown
-                for idx, weight in zip(indices[0], weights):
-                    neighbor_label = int(knn._y[idx])
-                    votes[neighbor_label] += weight
-
-                confidence = votes[pred_label] / votes.sum()
-
-                # Optional: Force "unknown" if confidence is too low
-                if confidence < 0.1:  # Adjustable threshold
+                # Unknown rejection (same threshold used in training)
+                if max_prob < 0.6:
                     current_prediction = "unknown"
                     current_confidence = None
                 else:
-                    current_prediction = class_map.get(pred_label, f"Class {pred_label}")
-                    current_confidence = confidence
+                    current_prediction = class_map.get(pred_idx, f"Class {pred_idx}")
+                    current_confidence = max_prob
 
                 last_infer_time = current_time
 
@@ -151,11 +117,10 @@ def main():
                 current_confidence = None
                 print(f"Inference error: {e}")
 
-        # Display prediction
+        # Display result
         display_text = f"Prediction: {current_prediction}"
         draw_label(frame, display_text, current_confidence)
 
-        # Instructions overlay
         cv2.putText(frame, "Hold object steady in frame",
                     (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
 
@@ -169,4 +134,6 @@ def main():
 
 
 if __name__ == "__main__":
+    # PIL is only needed here for converting frames
+    from PIL import Image
     main()
