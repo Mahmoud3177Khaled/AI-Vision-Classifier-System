@@ -7,8 +7,7 @@ import torchvision.transforms as transforms
 from PIL import Image
 from pathlib import Path
 
-class_map = 
-{
+class_map = {
     0: 'glass',
     1: 'paper',
     2: 'cardboard',
@@ -16,7 +15,6 @@ class_map =
     4: 'metal',
     5: 'trash'
 }
-
 
 
 device= torch.device("cpu")
