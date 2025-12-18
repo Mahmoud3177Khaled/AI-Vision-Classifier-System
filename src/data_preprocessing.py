@@ -9,26 +9,17 @@ import numpy as np
 from PIL import Image
 import albumentations as A
 
-# ======================================================
-# Reproducibility
-# ======================================================
 SEED = 42
 random.seed(SEED)
 np.random.seed(SEED)
 
-# ======================================================
-# Global configuration
-# ======================================================
-IMG_THRESHOLD = 600
+IMG_THRESHOLD = 500
 SUPPORTED_EXT = {".jpg", ".jpeg", ".png"}
 
 DATASET_DIR = Path("../dataset")
 TRAIN_DIR = Path("../train")
 TEST_DIR = Path("../test")
 
-# ======================================================
-# Per-class augmentation strength
-# ======================================================
 CLASS_STRENGTH = {
     "cardboard": 1.0,
     "glass": 0.8,     # preserve fragile edges
@@ -37,10 +28,6 @@ CLASS_STRENGTH = {
     "plastic": 1.0,
     "trash": 1.3      # most diverse → strongest augmentation
 }
-
-# ======================================================
-# Utility functions
-# ======================================================
 
 def is_valid_image(path: Path) -> bool:
     """Checks whether an image can be safely opened."""
@@ -66,14 +53,8 @@ def read_image(path: Path):
     return np.array(Image.open(path).convert("RGB"))
 
 
-def save_augmented_image(
-    image: np.ndarray,
-    save_dir: Path,
-    class_name: str,
-    phase: int,
-    source_name: str,
-    index: int
-):
+def save_augmented_image( image: np.ndarray, save_dir: Path, class_name: str,
+                          phase: int, source_name: str, index: int):
     """Saves augmented image with traceable filename."""
     filename = (
         f"{class_name}_p{phase}_"
@@ -88,9 +69,7 @@ def save_augmented_image(
 
 
 def split_original_images(clean_images, class_name: str):
-    """
-    Splits already-cleaned original images into train/test.
-    """
+    """Splits already-cleaned original images into train/test."""
     images = clean_images.copy()
     random.shuffle(images)
 
@@ -117,10 +96,6 @@ def split_original_images(clean_images, class_name: str):
 
     return train_images
 
-
-# ======================================================
-# Phase-based transformations
-# ======================================================
 
 def phase1_transform(h, w, strength):
     """Geometric + lighting robustness."""
@@ -149,21 +124,18 @@ def phase2_transform(strength):
         max_kernel += 1
 
     return A.Compose([
-        # --- COLOR-SAFE LIGHTING ---
         A.HueSaturationValue(
-            hue_shift_limit=0,              # NO hue changes
-            sat_shift_limit=0,              # NO saturation changes
-            val_shift_limit=int(20 * strength),  # brightness only
+            hue_shift_limit=0,
+            sat_shift_limit=0,
+            val_shift_limit=int(20 * strength),
             p=0.7
         ),
 
-        # --- CAMERA EFFECTS ---
         A.MotionBlur(
             blur_limit=(3, max_kernel),
             p=0.5
         ),
 
-        # --- SENSOR NOISE ---
         A.GaussNoise(
             std_range=(0.01 * strength, 0.05 * strength),
             p=0.4
@@ -186,10 +158,6 @@ def phase3_transform(h, w, strength):
         ),
     ])
 
-
-# ======================================================
-# Core augmentation logic
-# ======================================================
 
 def augment_class(class_name: str, train_images):
     train_class_dir = TRAIN_DIR / class_name
@@ -236,9 +204,6 @@ def augment_class(class_name: str, train_images):
             aug_count += 1
 
 
-# ======================================================
-# Entry point
-# ======================================================
 def main():
     if TRAIN_DIR.exists():
         shutil.rmtree(TRAIN_DIR)
