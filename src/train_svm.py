@@ -55,13 +55,13 @@ def predictSVM(sample, threshold=0.6,svm_model_dir=Path(__file__).resolve().pare
 
 
 
-if __name__ == "__main__":
-
-    trainSVM(svm_model,X_train,y_train)
-    save_dir = Path(__file__).resolve().parent.parent / "classifier"
-    getAccuracy(X_test,y_test)
-
-    threshold = 0.6
-
-    # print("Actual:",y_test)
-    predictSVM( X_test,threshold)
+# if __name__ == "__main__":
+#
+#     trainSVM(svm_model,X_train,y_train)
+#     save_dir = Path(__file__).resolve().parent.parent / "classifier"
+#     getAccuracy(X_test,y_test)
+#
+#     threshold = 0.6
+#
+#     # print("Actual:",y_test)
+#     predictSVM( X_test,threshold)
